@@ -1,5 +1,6 @@
+#include <stdlib.h>
+
 #include "PSJF_AVL_Tree.h"
-#include "PSJF_Queue.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Structs
@@ -8,7 +9,7 @@
 struct psjf_avl_tree_insertion_result {
     int status;
     struct psjf_avl_tree_node * addedNode;
-}
+};
 
 //////////////////////////////////////////////////////////////////////////////
 // Function Headers
@@ -26,24 +27,24 @@ struct psjf_avl_tree_insertion_result psjf_avl_tree_make_insertion_result(
 
 struct psjf_avl_tree_node * psjf_avl_tree_make_tree_node(
     struct psjf_avl_tree_node * parent, struct psjf_avl_tree_node * left,
-    struct psjf_avl_tree_node * right, long height, void* data);
+    struct psjf_avl_tree_node * right, long height, void * data);
 
 long psjf_avl_tree_max(long num1, long num2);
 
-void* psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
-    struct psjf_avl_tree_node * node, void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData));
+void * psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
+    struct psjf_avl_tree_node * node, void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData));
 
 struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
     struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node,
     struct psjf_avl_tree_node * parent,
-    void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData),
-    void* (*onNewNodeCreated)(*void),
-    void* (*onPreviousNodeFound)(*void nodeData, *void data));
+    void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData),
+    void * (*onNewNodeCreated)(void *),
+    void * (*onPreviousNodeFound)(void * nodeData, void * data));
 
 void psjf_avl_tree_rotate_left(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node);
@@ -51,9 +52,9 @@ void psjf_avl_tree_rotate_left(struct psjf_avl_tree * tree,
 void psjf_avl_tree_rotate_right(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node);
 
-void* psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
-    void* data, int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData));
+void * psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
+    void * data, int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData));
 
 void psjf_avl_tree_update_height(struct psjf_avl_tree_node * node);
 
@@ -61,43 +62,61 @@ void psjf_avl_tree_update_height(struct psjf_avl_tree_node * node);
 // Implementation
 //////////////////////////////////////////////////////////////////////////////
 
-void* psjf_avl_tree_delete(struct psjf_avl_tree * tree, void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData))
+void * psjf_avl_tree_delete(struct psjf_avl_tree * tree, void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData))
 {
     void * deletedData =
-        psjf_avl_tree_delete_helper(tree->root, data,
+        psjf_avl_tree_delete_helper(tree, tree->root, data,
             compareEncapsulatedNodeData);
 
 
-    if (deletedNode != null) {
+    if (deletedData != 0) {
         tree->numNodes = tree->numNodes - 1;
     }
 
     return deletedData;
 }
 
-void* psjf_avl_tree_get_max(struct psjf_avl_tree * tree) {
+void * psjf_avl_tree_get_max(struct psjf_avl_tree * tree) {
     return tree->max->data;
 }
 
-void* psjf_avl_tree_get_min(struct psjf_avl_tree * tree) {
+void * psjf_avl_tree_get_min(struct psjf_avl_tree * tree) {
     return tree->min->data;
 }
 
-int psjf_avl_tree_insert(struct psjf_avl_tree * tree, void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData),
-    void* (*onNewNodeCreated)(*void),
-    void* (*onPreviousNodeFound)(*void nodeData, *void data))
+int psjf_avl_tree_insert(struct psjf_avl_tree * tree, void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData),
+    void * (*onNewNodeCreated)(void *),
+    void * (*onPreviousNodeFound)(void * nodeData, void * data))
 {
     struct psjf_avl_tree_insertion_result insertionResult =
         psjf_avl_tree_insert_helper(
+            // the tree
+            tree,
+
+            // the starting point of the search process involved with every
+            // insertion; the root of the tree
             tree->root,
+
+            // the parent of the starting point (i.e., root), which is null
             0,
+
+            // the data that we will insert
             data,
+
+            // a function pointer that will be used to compare items in the tree
+            // with the data that is being added
             compareEncapsulatedNodeData,
+
+            // a function pointer that will be used if a new node needs to be
+            // created in order to insert the data into the tree
             onNewNodeCreated,
+
+            // a function pointer that will be used if a node containing the
+            // data to be inserted already exists in the tree
             onPreviousNodeFound);
 
     if (tree->min == 0 ||
@@ -112,7 +131,7 @@ int psjf_avl_tree_insert(struct psjf_avl_tree * tree, void* data,
         tree->max = insertionResult.addedNode;
     }
 
-    if (addedNode->parent == 0) {
+    if (insertionResult.addedNode->parent == 0) {
         tree->root = insertionResult.addedNode;
     }
 
@@ -123,9 +142,9 @@ int psjf_avl_tree_insert(struct psjf_avl_tree * tree, void* data,
     return insertionResult.status;
 }
 
-void* psjf_avl_tree_search(struct psjf_avl_tree * tree, void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData))
+void * psjf_avl_tree_search(struct psjf_avl_tree * tree, void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData))
 {
     return psjf_avl_tree_search_helper(tree->root, data,
         compareEncapsulatedNodeData);
@@ -174,15 +193,17 @@ long psjf_avl_tree_calculate_right_height(struct psjf_avl_tree_node * node) {
 struct psjf_avl_tree_insertion_result psjf_avl_tree_make_insertion_result(
     int status, struct psjf_avl_tree_node * addedNode)
 {
-    return struct psjf_avl_tree_insertion_result {
+    struct psjf_avl_tree_insertion_result returnVal = {
         .status = status,
         .addedNode = addedNode
     };
+
+    return returnVal;
 }
 
 struct psjf_avl_tree_node * psjf_avl_tree_make_tree_node(
     struct psjf_avl_tree_node * parent, struct psjf_avl_tree_node * left,
-    struct psjf_avl_tree_node * right, long height, void* data)
+    struct psjf_avl_tree_node * right, long height, void * data)
 {
     struct psjf_avl_tree_node * newNode =
         (struct psjf_avl_tree_node*) malloc(sizeof(
@@ -206,10 +227,10 @@ long psjf_avl_tree_max(long num1, long num2) {
     }
 }
 
-void* psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
-    struct psjf_avl_tree_node * node, void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData))
+void * psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
+    struct psjf_avl_tree_node * node, void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData))
 {
     if (node == 0) {
         return 0;
@@ -324,11 +345,11 @@ struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
     struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node,
     struct psjf_avl_tree_node * parent,
-    void* data,
-    int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData),
-    void* (*onNewNodeCreated)(*void),
-    void* (*onPreviousNodeFound)(*void nodeData, *void data))
+    void * data,
+    int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData),
+    void * (*onNewNodeCreated)(void *),
+    void * (*onPreviousNodeFound)(void * nodeData, void * data))
 {
     if (node == 0) {
         struct psjf_avl_tree_node * addedNode =
@@ -361,7 +382,7 @@ struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
         struct psjf_avl_tree_insertion_result insertionResult =
             psjf_avl_tree_insert_helper(tree, nextNode, node, data,
                 compareEncapsulatedNodeData, onNewNodeCreated,
-                xonPreviousNodeFound);
+                onPreviousNodeFound);
 
         if (insertionResult.status == TREE_INSERT_STATUS_NEW_NODE_CREATED) {
             psjf_avl_tree_balance_tree_if_necessary_at(tree, node);
@@ -415,9 +436,9 @@ void psjf_avl_tree_rotate_right(struct psjf_avl_tree * tree,
     }
 }
 
-void* psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
-    void* data, int (*compareEncapsulatedNodeData)(*void encapsulatedData,
-        *void unencapsulatedData))
+void * psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
+    void * data, int (*compareEncapsulatedNodeData)(void * encapsulatedData,
+        void * unencapsulatedData))
 {
     if (node == 0) {
         return 0;
@@ -436,7 +457,7 @@ void* psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
 }
 
 void psjf_avl_tree_update_height(struct psjf_avl_tree_node * node) {
-    node->height = psjf_avl_tree_get_max(
-        psjf_avl_tree_calculate_left_height(node) + 1,
-        psjf_avl_tree_calculate_right_height(node) + 1);
+    node->height = psjf_avl_tree_max(
+        (psjf_avl_tree_calculate_left_height(node) + 1),
+        (psjf_avl_tree_calculate_right_height(node) + 1));
 }
