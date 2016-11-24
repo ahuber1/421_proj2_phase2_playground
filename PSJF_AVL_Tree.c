@@ -240,6 +240,8 @@ void* psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
             else {
                 node->parent->right = 0;
             }
+
+            free(node);
         }
 
         // If a node has two children
@@ -247,14 +249,18 @@ void* psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
             if (node->left->right == 0 && node->right->left == 0) {
                 if (node == tree->root) {
                     tree->root = node->left;
-                    psjf_avl_tree_update_height(tree->root);
+
+                    // Unnecessary
+                    //psjf_avl_tree_update_height(tree->root);
                 }
                 else if (node->parent->left == node) {
                     node->parent->left = node->left;
+                    node->left->parent = node->parent;
                     psjf_avl_tree_update_height(node->parent->left);
                 }
                 else {
                     node->parent->right = node->left;
+                    node->right->parent = node->parent;
                     psjf_avl_tree_update_height(node->parent->right);
                 }
             }
@@ -288,6 +294,7 @@ void* psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
             }
 
             psjf_avl_tree_update_height(node->left);
+            free(node);
         }
 
         // If a node has one child on the right
@@ -306,9 +313,9 @@ void* psjf_avl_tree_delete_helper(struct psjf_avl_tree * tree,
             }
 
             psjf_avl_tree_update_height(node->right);
+            free(node);
         }
 
-        free(node);
         return returnVal;
     }
 }
@@ -352,7 +359,9 @@ struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
         }
 
         struct psjf_avl_tree_insertion_result insertionResult =
-            psjf_avl_tree_insert_helper(tree, nextNode, node, data, compareEncapsulatedNodeData, onNewNodeCreated, onPreviousNodeFound);
+            psjf_avl_tree_insert_helper(tree, nextNode, node, data,
+                compareEncapsulatedNodeData, onNewNodeCreated,
+                xonPreviousNodeFound);
 
         if (insertionResult.status == TREE_INSERT_STATUS_NEW_NODE_CREATED) {
             psjf_avl_tree_balance_tree_if_necessary_at(tree, node);
