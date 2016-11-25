@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "PSJF_AVL_Tree.h"
 
@@ -65,6 +66,9 @@ struct psjf_avl_tree_deletion_result_inner psjf_avl_tree_delete_helper(
     int (*compareEncapsulatedNodeData)(void * encapsulatedData,
         void * unencapsulatedData),
     struct psjf_avl_tree_deletion_result (*onNodeFound)(void * nodeData));
+
+void psjf_avl_tree_in_order_traversal_helper(struct psjf_avl_tree_node * node,
+    void (*onNodeTouched)(void *));
 
 struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
     struct psjf_avl_tree * tree,
@@ -219,6 +223,8 @@ struct psjf_avl_tree_deletion_result_final psjf_avl_tree_delete_max(
 
         tree->min = minAndMax.min;
         tree->max = minAndMax.max;
+
+        free(result.nodeRemoved);
     }
 
     return psjf_avl_tree_make_deletion_result_final(result);
@@ -230,6 +236,16 @@ void * psjf_avl_tree_get_max(struct psjf_avl_tree * tree) {
 
 void * psjf_avl_tree_get_min(struct psjf_avl_tree * tree) {
     return tree->min->data;
+}
+
+long psjf_avl_tree_get_num_nodes(struct psjf_avl_tree * tree) {
+    return tree->numNodes;
+}
+
+void psjf_avl_tree_in_order_traversal(struct psjf_avl_tree * tree,
+    void (*onNodeTouched)(void *))
+{
+    psjf_avl_tree_in_order_traversal_helper(tree->root, onNodeTouched);
 }
 
 int psjf_avl_tree_insert(struct psjf_avl_tree * tree, void * data,
@@ -304,6 +320,18 @@ struct psjf_avl_tree_deletion_result psjf_avl_tree_make_deletion_result(
     return returnVal;
 }
 
+struct psjf_avl_tree * psjf_avl_tree_make_empty_tree(void) {
+    struct psjf_avl_tree * emptyTree =
+        (struct psjf_avl_tree *) malloc(sizeof(struct psjf_avl_tree));
+
+    emptyTree->max = 0;
+    emptyTree->min = 0;
+    emptyTree->numNodes = 0;
+    emptyTree->root = 0;
+
+    return emptyTree;
+}
+
 void * psjf_avl_tree_search(struct psjf_avl_tree * tree, void * data,
     int (*compareEncapsulatedNodeData)(void * encapsulatedData,
         void * unencapsulatedData))
@@ -319,9 +347,14 @@ void * psjf_avl_tree_search(struct psjf_avl_tree * tree, void * data,
 void psjf_avl_tree_balance_tree_if_necessary_at(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node)
 {
-    long leftHeight = psjf_avl_tree_calculate_left_height(node) + 1;
-    long rightHeight = psjf_avl_tree_calculate_right_height(node) + 1;
+    long leftHeight = psjf_avl_tree_calculate_left_height(node);
+    long rightHeight = psjf_avl_tree_calculate_right_height(node);
     long balanceFactor = -leftHeight + rightHeight;
+
+    //printf("   leftHeight = %ld\n", leftHeight);
+    //printf("  rightHeight = %ld\n", rightHeight);
+    //printf("balanceFactor = %ld\n", balanceFactor);
+    //printf("\n");
 
     // If the tree at node is left-heavy, rotate right, and update the height as
     // necessary in one step.
@@ -379,20 +412,20 @@ struct psjf_avl_tree_deletion_result_inner
     returnVal.dataRemoved = result.dataRemoved;
     returnVal.dataToStoreInNode = result.dataToStoreInNode;
 
-    // If there was no data that was removed, but the data in the node was
-    // altered, then the status is TREE_DELETION_STATUS_NODE_ALTERED
-    if (result.dataRemoved == 0 && result.dataToStoreInNode != 0) {
+    // If data was removed and there is data to store in the node, then set the
+    // status to TREE_DELETION_STATUS_NODE_ALTERED
+    if (result.dataRemoved != 0 && result.dataToStoreInNode != 0) {
         returnVal.status = TREE_DELETION_STATUS_NODE_ALTERED;
     }
 
-    // If there was data that was removed, and the data in the node was altered,
-    // then the status is TREE_DELETION_STATUS_NODE_REMOVED
+    // If the data was removed and there is NO data to store in the node, then
+    // set the status to TREE_DELETION_STATUS_NODE_REMOVED
     else if (result.dataRemoved != 0 && result.dataToStoreInNode == 0) {
         returnVal.status = TREE_DELETION_STATUS_NODE_REMOVED;
     }
 
-    // If there is any other combination of values, then user did not return a
-    // valid set of values, thereby making the status
+    // If there is any other combination of values, then the user did not return
+    // a valid set of values, thereby making the status
     // TREE_DELETION_STATUS_FAILURE
     else {
         returnVal.status = TREE_DELETION_STATUS_FAILURE;
@@ -528,6 +561,49 @@ struct psjf_avl_tree_deletion_result_inner psjf_avl_tree_delete_helper(
     }
 }
 
+void psjf_avl_tree_in_order_traversal_helper(struct psjf_avl_tree_node * node,
+    void (*onNodeTouched)(void *))
+{
+    if (node != 0) {
+        psjf_avl_tree_in_order_traversal_helper(node->left, onNodeTouched);
+
+        printf("PARENT: ");
+        if (node->parent == 0) {
+            printf("null\n");
+        }
+        else {
+            onNodeTouched(node->parent->data);
+            printf("\n");
+        }
+
+        printf("  NODE: ");
+        onNodeTouched(node->data);
+        printf(" (height = %ld)\n", node->height);
+
+        printf("  LEFT: ");
+        if (node->left == 0){
+            printf("null\n");
+        }
+        else {
+            onNodeTouched(node->left->data);
+            printf("\n");
+        }
+
+        printf(" RIGHT: ");
+        if (node->right == 0) {
+            printf("null\n");
+        }
+        else {
+            onNodeTouched(node->right->data);
+            printf("\n");
+        }
+
+        printf("\n");
+
+        psjf_avl_tree_in_order_traversal_helper(node->right, onNodeTouched);
+    }
+}
+
 struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
     struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node,
@@ -549,6 +625,16 @@ struct psjf_avl_tree_insertion_result psjf_avl_tree_insert_helper(
                 0,                     // height
                 onNewNodeCreated(data) // node data
             );
+
+        // Link the parent (if there is one) to the child we just created
+        if (parent != 0) {
+            if (compareEncapsulatedNodeData(parent->data, data) > 0) {
+                parent->left = addedNode;
+            }
+            else {
+                parent->right = addedNode;
+            }
+        }
 
         return psjf_avl_tree_make_insertion_result(
             TREE_INSERT_STATUS_NEW_NODE_CREATED, addedNode);
@@ -726,41 +812,93 @@ void psjf_avl_tree_perform_deletion(
 void psjf_avl_tree_rotate_left(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node)
 {
+    // printf("Left Checkpoint %d\n", 1);
     struct psjf_avl_tree_node * temp = node->right;
 
+    // printf("Left Checkpoint %d\n", 2);
     node->right = node->right->left;
+    // printf("Left Checkpoint %d\n", 3);
     temp->left = node;
 
-    node->right->parent = node;
-    temp->left->parent = temp;
+    temp->parent = node->parent;
 
+    if (temp->parent != 0) {
+        if (temp->parent->left == node) {
+            temp->parent->left = temp;
+        }
+        else {
+            temp->parent->right = temp;
+        }
+    }
+
+    // printf("Left Checkpoint %d\n", 4);
+    if (node->right != 0) {
+        node->right->parent = node;
+    }
+    // printf("Left Checkpoint %d\n", 5);
+    if (temp->left != 0) {
+        temp->left->parent = temp;
+    }
+
+    // printf("Left Checkpoint %d\n", 6);
     psjf_avl_tree_update_height(node);
+    // printf("Left Checkpoint %d\n", 7);
     psjf_avl_tree_update_height(temp);
 
     if (node == tree->root) {
+        // printf("Left Checkpoint %d\n", 8);
         tree->root = temp;
+        // printf("Left Checkpoint %d\n", 9);
         temp->parent = 0; // set the parent of the new root to null
     }
+
+    // printf("Left Checkpoint %d\n", 10);
 }
 
 void psjf_avl_tree_rotate_right(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node)
 {
+    // printf("Right Checkpoint %d\n", 1);
     struct psjf_avl_tree_node * temp = node->left;
 
+    // printf("Right Checkpoint %d\n", 2);
     node->left = node->left->right;
+    // printf("Right Checkpoint %d\n", 3);
     temp->right = node;
 
-    node->left->parent = node;
-    temp->right->parent = temp;
+    temp->parent = node->parent;
 
+    if (temp->parent != 0) {
+        if (temp->parent->left == node) {
+            temp->parent->left = temp;
+        }
+        else {
+            temp->parent->right = temp;
+        }
+    }
+
+    // printf("Right Checkpoint %d\n", 4);
+    if (node->left != 0) {
+        node->left->parent = node;
+    }
+    // printf("Right Checkpoint %d\n", 5);
+    if (temp->right != 0) {
+        temp->right->parent = temp;
+    }
+
+    // printf("Right Checkpoint %d\n", 6);
     psjf_avl_tree_update_height(node);
+    // printf("Right Checkpoint %d\n", 7);
     psjf_avl_tree_update_height(temp);
 
     if (node == tree->root) {
+        //printf("Right Checkpoint %d\n", 8);
         tree->root = temp;
+        //printf("Right Checkpoint %d\n", 9);
         temp->parent = 0; // set the parent of the new root to null
     }
+
+    //printf("Right Checkpoint %d\n", 10);
 }
 
 void * psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
@@ -792,9 +930,14 @@ void * psjf_avl_tree_search_helper(struct psjf_avl_tree_node * node,
 }
 
 void psjf_avl_tree_update_height(struct psjf_avl_tree_node * node) {
-    node->height = psjf_avl_tree_max(
-        psjf_avl_tree_calculate_left_height(node) + 1,
-        psjf_avl_tree_calculate_right_height(node) + 1);
+    if (node->left == 0 && node->right == 0) {
+        node->height = 0;
+    }
+    else {
+        node->height = psjf_avl_tree_max(
+            psjf_avl_tree_calculate_left_height(node) + 1,
+            psjf_avl_tree_calculate_right_height(node) + 1);
+    }
 }
 
 struct psjf_avl_tree_min_and_max

@@ -120,7 +120,7 @@ void psjf_linked_list_print_contents(struct psjf_linked_list * list,
 {
     struct psjf_linked_list_node * node = list->head;
 
-    printf(" FORWARDS: [");
+    printf("[");
     while (node != 0) {
         printItem(node->data);
         node = node->next;
@@ -128,19 +128,7 @@ void psjf_linked_list_print_contents(struct psjf_linked_list * list,
         if (node != 0)
             printf(", ");
     }
-    printf("]\n");
-
-    node = list->tail;
-
-    printf("BACKWARDS: [");
-    while (node != 0) {
-        printItem(node->data);
-        node = node->previous;
-
-        if (node != 0)
-            printf(", ");
-    }
-    printf("]\n");
+    printf("]");
 }
 
 void * psjf_linked_list_search(

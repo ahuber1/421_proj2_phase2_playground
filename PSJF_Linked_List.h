@@ -62,4 +62,8 @@ void* psjf_linked_list_search(
     psjf_linked_list_delete(list, psjf_linked_list_get_tail_data(list), \
         compareNodeData);
 
+#define PSJF_QUEUE_PEEK(list) psjf_linked_list_get_head_data(list);
+
+#define PSJF_STACK_PEEK(list) psjf_linked_list_get_tail_data(list);
+
 #endif
