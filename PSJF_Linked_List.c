@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <execinfo.h>
 
 #include "PSJF_Linked_List.h"
 
@@ -49,6 +50,10 @@ void* psjf_linked_list_delete(
         linkedList->numNodes = linkedList->numNodes - 1;
 
         free(node);
+        
+        if ((linkedList->head == 0 || linkedList->tail == 0) && linkedList->numNodes > 0) {
+            printf("HERE!\n");
+        }
 
         return returnVal;
     }
@@ -102,6 +107,10 @@ void psjf_linked_list_insert_at_tail(
     }
 
     linkedList->numNodes = linkedList->numNodes + 1;
+    
+    if ((linkedList->head == 0 || linkedList->tail == 0) && linkedList->numNodes > 0) {
+        printf("HERE!\n");
+    }
 }
 
 struct psjf_linked_list * psjf_linked_list_make_empty_list(void) {

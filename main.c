@@ -1,89 +1,129 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <sys/time.h>
 
 #include "PSJF_AVL_Tree.h"
 #include "PSJF_Linked_List.h"
 #include "PSJF_Shared.h"
 
-#define MIN = 1
-#define MAX = 15
-#define NUMBER_OF_NUMBERS = MAX - MIN
-#define ASCENDING_FOR int i; for(i = MIN; i <= MAX; i++)
-#define DESCENDING_FOR int i; for(i = MAX; i >= MIN, i++)
-#define MAP_INDEX(num) num - MIN
+#define DURATION 30
+#define MIN 1
+#define MAX 10000
+#define RANDOM(min, max) ((rand() % (max - min + 1)) + min)
 
 int compareInts(void * ptr1, void * ptr2);
 void printInt(void * ptr);
-int compareEncapsulatedNodeData(void * encapsulatedData,
-    void * unencapsulatedData);
-void * onNewNodeCreated(void * unencapsulatedData);
-void * onPreviousNodeFound(void * nodeData, void * data);
+int compareEncapsulatedNodeData(void * encapsulatedData, void * unencapsulatedData);
 void printQueue(void * nodeData);
-void insert(struct psjf_avl_tree * tree);
-void randomRemove(struct psjf_avl_tree * tree);
-struct psjf_avl_tree_deletion_result onNodeFoundDeletion(void * nodeData);
 
-int removed[NUMBER_OF_NUMBERS];
+struct test_results {
+    unsigned long treeCleared;
+    unsigned long insertStatusNewNodeCreated;
+    unsigned long insertStatusPreviousNodeFound;
+    unsigned long deletionStatusMismatch;
+    unsigned long deletionStatusNodeRemoved;
+    unsigned long deletionStatusFailure;
+};
 
 int main(int argc, char const *argv[]) {
+    srand(time(0));
     struct psjf_avl_tree * tree = psjf_avl_tree_make_empty_tree();
+    struct test_results results;
+    //struct timeval start_tv;
+    //struct timezone start_tz;
+    //struct timeval tv;
+    //struct timezone tz;
 
-    insert(tree);
-    //insert(tree);
+    results.treeCleared = -1;
+    results.insertStatusNewNodeCreated = 0;
+    results.insertStatusPreviousNodeFound = 0;
+    results.deletionStatusMismatch = 0;
+    results.deletionStatusNodeRemoved = 0;
+    results.deletionStatusFailure = 0;
 
-    return 0;
-}
+    //gettimeofday(&start_tv, &start_tz);
+    //gettimeofday(&tv, &tz);
 
-void randomRemove(struct psjf_avl_tree * tree) {
-    int num;
-    int count = 0;
-    srand(time(NULL));
-    while (count < NUMBER_OF_NUMBERS) {
-        num = (rand() % NUMBER_OF_NUMBERS) + MIN
-        if (removed[MAP_INDEX(num)] == FALSE) {
-            struct psjf_avl_tree_deletion_result_final =
-                psjf_avl_tree_delete(tree, &num, &compareEncapsulatedNodeData,
-                    &onNodeFoundDeletion);
+    //long timediff = (tv.tv_sec - start_tv.tv_sec);
+    
+    int insertCounter = 30000;
+    int deleteCounter = insertCounter / 2;
+
+    while (insertCounter > 0 || deleteCounter > 0) {
+
+        int * data = (int *) malloc(sizeof(int));
+        *data = RANDOM(MIN, MAX);
+        int insert;
+        long numNodes = psjf_avl_tree_get_num_nodes(tree);
+        //int selection = RANDOM(1, 2);
+
+        if (numNodes == 0) {
+            results.treeCleared++;
+            insert = TRUE;
+        }
+        else if (insertCounter > 0) {
+            insert = TRUE;
+        }
+        else {
+            insert = FALSE; // will be changed
+        }
+        
+        printf("Data = %d\n", *data);
+
+        if (insert == TRUE) {
+
+            printf("[INSERT] ");
+
+            int insertResult = psjf_avl_tree_insert(tree, data, &compareInts);
+
+            switch (insertResult) {
+                case TREE_INSERT_STATUS_NEW_NODE_CREATED:
+                    printf("New Node Created [%3d]\n", *data);
+                    results.insertStatusNewNodeCreated++;
+                    break;
+                case TREE_INSERT_STATUS_PREVIOUS_NODE_FOUND:
+                    printf("Previous Node Found [%3d]\n", *data);
+                    results.insertStatusPreviousNodeFound++;
+                    break;
+            }
+            
+            insertCounter--;
+        }
+        else {
+            printf("[DELETE] ");
+
+            void * returnVal = psjf_avl_tree_delete(tree, data, &compareInts);
+
+            if (returnVal != 0 && compareInts(returnVal, data) == 0) {
+                data = (int *) returnVal;
+                printf("Previous Node Found [%3d]\n", *data);
+                results.deletionStatusNodeRemoved++;
+            }
+            else if (returnVal != 0) {
+                printf("Mismatch\n");
+                results.deletionStatusMismatch++;
+            }
+            else {
+                printf("Failure\n");
+                results.deletionStatusFailure++;
+            }
+            
+            deleteCounter--;
         }
 
+        printf("Number of Nodes: %ld\n", psjf_avl_tree_get_num_nodes(tree));
+        free(data);
     }
-}
 
-void insert(struct psjf_avl_tree * tree) {
-    int * ptr;
-    ASCENDING_FOR {
-        ptr = malloc(sizeof(int));
-        *ptr = i;
-        int result = psjf_avl_tree_insert(tree, ptr,
-            &compareEncapsulatedNodeData, &onNewNodeCreated,
-            &onPreviousNodeFound);
-
-        const char * status;
-
-        switch (result) {
-            case TREE_INSERT_STATUS_NEW_NODE_CREATED:
-                status = "NEW_NODE_CREATED";
-                break;
-            case TREE_INSERT_STATUS_PREVIOUS_NODE_FOUND:
-                status = "PREVIOUS_NODE_FOUND";
-                break;
-            default:
-                status = "UNKNOWN";
-        }
-
-        printf("Inserted %d with status %s\n\n", i, status);
-        printf("MIN NODE: ");
-        printQueue(psjf_avl_tree_get_min(tree));
-        printf("\n");
-        printf("MAX NODE: ");
-        printQueue(psjf_avl_tree_get_max(tree));
-        printf("\n");
-        printf("NUM NODES: %ld\n", psjf_avl_tree_get_num_nodes(tree));
-        printf("-----------------------------------------------------------\n");
-
-        removed[MAP_INDEX(i)] = FALSE;
-    }
+     printf("\nRESULTS:\n");
+     printf("\n                     Tree Cleared: %ld\n", results.treeCleared);
+     printf("\n   Insert Status New Node Created: %ld\n", results.insertStatusNewNodeCreated);
+     printf("\nInsert Status Previous Node Found: %ld\n", results.insertStatusPreviousNodeFound);
+     printf("\n     Deletion Status Node Failure: %ld\n", results.deletionStatusFailure);
+     printf("\n     Deletion Status Node Removed: %ld\n", results.deletionStatusNodeRemoved);
+     printf("\n         Deletion Status Mismatch: %ld\n", results.deletionStatusMismatch);
+     printf("\n                     Size of Tree: %ld\n", psjf_avl_tree_get_num_nodes(tree));
+     printf("\n                  Calculated Size: %ld\n", results.insertStatusNewNodeCreated - results.deletionStatusNodeRemoved);
 }
 
 int compareInts(void * ptr1, void * ptr2) {
@@ -94,50 +134,14 @@ void printInt(void * ptr) {
     printf("%d", *((int*) ptr));
 }
 
-int compareEncapsulatedNodeData(void * encapsulatedData,
-    void * unencapsulatedData)
-{
-    struct psjf_linked_list * list =
-        (struct psjf_linked_list *) encapsulatedData;
-    void * ptr1 = PSJF_QUEUE_PEEK(list);
-
-    return compareInts(ptr1, unencapsulatedData);
-}
-
-void * onNewNodeCreated(void * unencapsulatedData) {
-    struct psjf_linked_list * list = psjf_linked_list_make_empty_list();
-    PSJF_ENQUEUE(list, unencapsulatedData);
-
-    return list;
-}
-
-void * onPreviousNodeFound(void * nodeData, void * data) {
-    struct psjf_linked_list * list =
-        (struct psjf_linked_list *) nodeData;
-    PSJF_ENQUEUE(list, data);
-
-    return list;
-}
-
 void printQueue(void * nodeData) {
-    struct psjf_linked_list * list =
-        (struct psjf_linked_list *) nodeData;
-
-    psjf_linked_list_print_contents(list, &printInt);
-}
-
-struct psjf_avl_tree_deletion_result onNodeFoundDeletion(void * nodeData) {
-    struct psjf_linked_list * list =
-        (struct psjf_linked_list *) nodeData;
-    struct psjf_avl_tree_deletion_result returnVal;
-    returnVal.dataRemoved = PSJF_DEQUEUE(list, &compareInts);
-
-    if (psjf_linked_list_get_num_nodes(list) == 0) {
-        returnVal.dataToStoreInNode = 0;
+    if (nodeData == 0) {
+        printf("null");
     }
     else {
-        returnVal.dataToStoreInNode = list;
-    }
+        struct psjf_linked_list * list =
+            (struct psjf_linked_list *) nodeData;
 
-    return returnVal;
+        psjf_linked_list_print_contents(list, &printInt);
+    }
 }
