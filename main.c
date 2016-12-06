@@ -2,146 +2,156 @@
 #include <stdlib.h>
 #include <sys/time.h>
 
-#include "PSJF_AVL_Tree.h"
-#include "PSJF_Linked_List.h"
+#include "PSJF_Dictionary.h"
 #include "PSJF_Shared.h"
 
-#define DURATION 30
 #define MIN 1
-#define MAX 10000
+#define MAX 100000
+#define N 10
 #define RANDOM(min, max) ((rand() % (max - min + 1)) + min)
 
 int compareInts(void * ptr1, void * ptr2);
 void printInt(void * ptr);
-int compareEncapsulatedNodeData(void * encapsulatedData, void * unencapsulatedData);
-void printQueue(void * nodeData);
 
-struct test_results {
-    unsigned long treeCleared;
-    unsigned long insertStatusNewNodeCreated;
-    unsigned long insertStatusPreviousNodeFound;
-    unsigned long deletionStatusMismatch;
-    unsigned long deletionStatusNodeRemoved;
-    unsigned long deletionStatusFailure;
-};
+void printItem(void * ptr) {
+    struct psjf_dictionary_item * item = (struct psjf_dictionary_item *) ptr;
+    printf("(");
+    printInt(item->key);
+    printf(", ");
+    printInt(item->value);
+    printf(")");
+}
+
+int linearSearch(int size, int * array, int target) {
+    int i;
+    
+    for (i = 0; i < size; i++) {
+        if (array[i] == target) {
+            return TRUE;
+        }
+        if (array[i] == 0) {
+            return FALSE;
+        }
+    }
+    
+    return FALSE;
+}
+
+void clearOutArray(int size, int * array) {
+    int i;
+    
+    for (i = 0; i < size; i++) {
+        array[i] = 0;
+    }
+}
 
 int main(int argc, char const *argv[]) {
     srand(time(0));
-    struct psjf_avl_tree * tree = psjf_avl_tree_make_empty_tree();
-    struct test_results results;
-    //struct timeval start_tv;
-    //struct timezone start_tz;
-    //struct timeval tv;
-    //struct timezone tz;
+    struct psjf_dictionary * dict = psjf_dictionary_make_dictionary();
+    int randomNumbers[N];
+    clearOutArray(N, randomNumbers);
+    int i;
 
-    results.treeCleared = -1;
-    results.insertStatusNewNodeCreated = 0;
-    results.insertStatusPreviousNodeFound = 0;
-    results.deletionStatusMismatch = 0;
-    results.deletionStatusNodeRemoved = 0;
-    results.deletionStatusFailure = 0;
-
-    //gettimeofday(&start_tv, &start_tz);
-    //gettimeofday(&tv, &tz);
-
-    //long timediff = (tv.tv_sec - start_tv.tv_sec);
-    
-    int insertCounter = 30000;
-    int deleteCounter = insertCounter / 2;
-
-    while (insertCounter > 0 || deleteCounter > 0) {
-
-        int * data = (int *) malloc(sizeof(int));
-        *data = RANDOM(MIN, MAX);
-        int insert;
-        long numNodes = psjf_avl_tree_get_num_nodes(tree);
-        //int selection = RANDOM(1, 2);
-
-        if (numNodes == 0) {
-            results.treeCleared++;
-            insert = TRUE;
-        }
-        else if (insertCounter > 0) {
-            insert = TRUE;
-        }
-        else {
-            insert = FALSE; // will be changed
-        }
+    for (i = 0; i < N; i++) {
+        int * value = (int *) myalloc(sizeof(int));
+        int * key = (int *) myalloc(sizeof(int));
         
-        printf("Data = %d\n", *data);
+        do {
+            *key = RANDOM(MIN, MAX);
+        } while (linearSearch(N, randomNumbers, *key) == TRUE);
+        
+        randomNumbers[i] = *key;
+        *value = randomNumbers[i] * 2;
 
-        if (insert == TRUE) {
+        psjf_dictionary_set(dict, key, value, &compareInts);
+        printf("1. Added (%d, %d)\n", randomNumbers[i], *value);
+        printf("\n");
+        psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
+        printf("\n");
+    }
+    
+    int * key = (int *) myalloc(sizeof(int));
 
-            printf("[INSERT] ");
+    for (i = 0; i < N; i++) {
+        printf("%d\n", randomNumbers[i]);
+        *key = randomNumbers[i];
+        int * value = (int *) psjf_dictionary_get(dict, key, &compareInts);
+        printf("\n");
+        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
 
-            int insertResult = psjf_avl_tree_insert(tree, data, &compareInts);
-
-            switch (insertResult) {
-                case TREE_INSERT_STATUS_NEW_NODE_CREATED:
-                    printf("New Node Created [%3d]\n", *data);
-                    results.insertStatusNewNodeCreated++;
-                    break;
-                case TREE_INSERT_STATUS_PREVIOUS_NODE_FOUND:
-                    printf("Previous Node Found [%3d]\n", *data);
-                    results.insertStatusPreviousNodeFound++;
-                    break;
-            }
-            
-            insertCounter--;
+        if (value == 0) {
+            fprintf(stderr, "2. Failure; null pointer...\n");
+            return -1;
+        }
+        else if (randomNumbers[i] * 2 == *value) {
+            printf("2. %d passed with a value of %d\n", i, *value);
         }
         else {
-            printf("[DELETE] ");
-
-            void * returnVal = psjf_avl_tree_delete(tree, data, &compareInts);
-
-            if (returnVal != 0 && compareInts(returnVal, data) == 0) {
-                data = (int *) returnVal;
-                printf("Previous Node Found [%3d]\n", *data);
-                results.deletionStatusNodeRemoved++;
-            }
-            else if (returnVal != 0) {
-                printf("Mismatch\n");
-                results.deletionStatusMismatch++;
-            }
-            else {
-                printf("Failure\n");
-                results.deletionStatusFailure++;
-            }
-            
-            deleteCounter--;
+            fprintf(stderr, "2. %d failed with a value of %d\n", i, *value);
+            return -1;
         }
 
-        printf("Number of Nodes: %ld\n", psjf_avl_tree_get_num_nodes(tree));
-        free(data);
+        value = (int *) myalloc(sizeof(int));
+        *value = randomNumbers[i] * 3;
+
+        psjf_dictionary_set(dict, &randomNumbers[i], value, &compareInts);
+        printf("\n");
+        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
     }
 
-     printf("\nRESULTS:\n");
-     printf("\n                     Tree Cleared: %ld\n", results.treeCleared);
-     printf("\n   Insert Status New Node Created: %ld\n", results.insertStatusNewNodeCreated);
-     printf("\nInsert Status Previous Node Found: %ld\n", results.insertStatusPreviousNodeFound);
-     printf("\n     Deletion Status Node Failure: %ld\n", results.deletionStatusFailure);
-     printf("\n     Deletion Status Node Removed: %ld\n", results.deletionStatusNodeRemoved);
-     printf("\n         Deletion Status Mismatch: %ld\n", results.deletionStatusMismatch);
-     printf("\n                     Size of Tree: %ld\n", psjf_avl_tree_get_num_nodes(tree));
-     printf("\n                  Calculated Size: %ld\n", results.insertStatusNewNodeCreated - results.deletionStatusNodeRemoved);
+    for (i = 0; i < N; i++) {
+        
+        int * value = (int *) psjf_dictionary_get(dict, &randomNumbers[i], &compareInts);
+        printf("\n");
+        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
+
+        if (value == 0) {
+            fprintf(stderr, "3. Failure; null pointer...\n");
+            return -1;
+        }
+        else if (randomNumbers[i] * 3 == *value) {
+            printf("3. %d passed with a value of %d\n", i, *value);
+        }
+        else {
+            fprintf(stderr, "3. %d failed with a value of %d\n", i, *value);
+            return -1;
+        }
+
+        psjf_dictionary_remove(dict, &randomNumbers[i], &compareInts);
+        printf("\n");
+        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
+    }
+
+    for (i = 0; i < N; i++) {
+        if (psjf_dictionary_get(dict, &randomNumbers[i], &compareInts) == 0) {
+            printf("4. %d passed\n", randomNumbers[i]);
+        }
+        else {
+            fprintf(stderr, "4. %d failed\n", randomNumbers[i]);
+            return -1;
+        }
+    }
+
+    psjf_dictionary_clear(dict);
+    free(dict);
 }
 
 int compareInts(void * ptr1, void * ptr2) {
-    return *((int*) ptr1) - *((int*) ptr2);
+    int num1 = *((int *) ptr1);
+    int num2 = *((int *) ptr2);
+    printf("num1 = %d\tnum2 = %d\n", num1, num2);
+    return num1 - num2;
 }
 
 void printInt(void * ptr) {
     printf("%d", *((int*) ptr));
 }
 
-void printQueue(void * nodeData) {
-    if (nodeData == 0) {
-        printf("null");
-    }
-    else {
-        struct psjf_linked_list * list =
-            (struct psjf_linked_list *) nodeData;
-
-        psjf_linked_list_print_contents(list, &printInt);
-    }
-}
+//void printItem(void * ptr) {
+//    struct psjf_dictionary_item * item = (struct psjf_dictionary_item *) ptr;
+//    printf("(");
+//    printInt(item->key);
+//    printf(", ");
+//    printInt(item->value);
+//    printf(")");
+//}

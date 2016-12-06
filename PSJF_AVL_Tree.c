@@ -29,6 +29,8 @@ void * psjf_avl_tree_delete_helper(
     void * data,
     int (*compareEncapsulatedNodeData)(void * dataInNode, void * dataToDelete));
 
+void psjf_avl_tree_delete_all_helper(struct psjf_avl_tree_node * node);
+
 void psjf_avl_tree_in_order_traversal_helper(struct psjf_avl_tree_node * node,
     void (*onNodeTouched)(void *));
 
@@ -64,12 +66,18 @@ void * psjf_avl_tree_delete(
     int (*compareEncapsulatedNodeData)(void * dataInNode, void * dataToDelete))
 {
     void * returnVal = psjf_avl_tree_delete_helper(tree, tree->root, 0, data, compareEncapsulatedNodeData);
-    
+
     if (returnVal != 0) {
         tree->numNodes = tree->numNodes - 1;
     }
-    
+
     return returnVal;
+}
+
+void psjf_avl_tree_delete_all(struct psjf_avl_tree * tree) {
+    psjf_avl_tree_delete_all_helper(tree->root);
+    tree->root = 0;
+    tree->numNodes = 0;
 }
 
 long psjf_avl_tree_get_num_nodes(struct psjf_avl_tree * tree) {
@@ -86,17 +94,17 @@ int psjf_avl_tree_insert(struct psjf_avl_tree * tree, void * data,
     int (*compareEncapsulatedNodeData)(void * encapsulatedData, void * unencapsulatedData))
 {
     int returnVal = psjf_avl_tree_insert_helper(tree, tree->root, 0, data, compareEncapsulatedNodeData);
-    
+
     if (returnVal == TREE_INSERT_STATUS_NEW_NODE_CREATED) {
         tree->numNodes = tree->numNodes + 1;
     }
-    
+
     return returnVal;
 }
 
 struct psjf_avl_tree * psjf_avl_tree_make_empty_tree(void) {
     struct psjf_avl_tree * emptyTree =
-        (struct psjf_avl_tree *) malloc(sizeof(struct psjf_avl_tree));
+        (struct psjf_avl_tree *) myalloc(sizeof(struct psjf_avl_tree));
 
     emptyTree->numNodes = 0;
     emptyTree->root = 0;
@@ -140,7 +148,7 @@ int psjf_avl_tree_balance_tree_if_necessary_at(struct psjf_avl_tree * tree,
     else {
         psjf_avl_tree_update_height(node);
     }
-    
+
     if (node->height == originalHeight) {
         return FALSE;
     }
@@ -180,7 +188,7 @@ struct psjf_avl_tree_node * psjf_avl_tree_make_tree_node(
     struct psjf_avl_tree_node * right, long height, void * data)
 {
     struct psjf_avl_tree_node * newNode =
-        (struct psjf_avl_tree_node*) malloc(sizeof(
+        (struct psjf_avl_tree_node*) myalloc(sizeof(
             struct psjf_avl_tree_node));
     newNode->left   = left;
     newNode->right  = right;
@@ -247,14 +255,14 @@ void * psjf_avl_tree_delete_helper(
             else {
                 parent->right = 0;
             }
-            
+
             void * returnVal = node->data;
             free(node);
             return returnVal;
         }
         // If there are two children
         else if (node->left != 0 && node->right != 0) {
-            
+
             // If the leftmost inorder successor exists, swap data and recursively call
             if (node->left->right != 0) {
                 psjf_avl_tree_swap_data(node, node->left->right);
@@ -262,7 +270,7 @@ void * psjf_avl_tree_delete_helper(
                 psjf_avl_tree_update_height(node);
                 return returnVal;
             }
-            
+
             // If the rightmost inorder successor exists
             else if (node->right->left != 0) {
                 psjf_avl_tree_swap_data(node, node->right->left);
@@ -279,19 +287,35 @@ void * psjf_avl_tree_delete_helper(
                 return returnVal;
             }
         }
-        // If there is only one child on the left, swap data, and recursively call
+        // If there is only one child on the left
         else if (node->right == 0) {
-            psjf_avl_tree_swap_data(node, node->left);
-            void * returnVal = psjf_avl_tree_delete_helper(tree, node->left, node, data, compareEncapsulatedNodeData);
-            psjf_avl_tree_update_height(node);
-            return returnVal;
+            if (tree->root == node) {
+                tree->root = node->left;
+            }
+            else if (parent->left == node) {
+                parent->left = node->left;
+            }
+            else {
+                parent->right = node->left;
+            }
+            
+            psjf_avl_tree_update_height(node->left);
+            return node->data;
         }
-        // If there is only one child on the right, swap data and recursively call
+        // If there is only one child on the right
         else {
-            psjf_avl_tree_swap_data(node, node->right);
-            void * returnVal = psjf_avl_tree_delete_helper(tree, node->right, node, data, compareEncapsulatedNodeData);
-            psjf_avl_tree_update_height(node);
-            return returnVal;
+            if (tree->root == node) {
+                tree->root = node->right;
+            }
+            else if (parent->left == node) {
+                parent->left = node->right;
+            }
+            else {
+                parent->right = node->right;
+            }
+            
+            psjf_avl_tree_update_height(node->right);
+            return node->data;
         }
     }
 }
@@ -356,7 +380,7 @@ int psjf_avl_tree_insert_helper(
                 parent->right = addedNode;
             }
         }
-        
+
         if (tree->root == 0) {
             tree->root = addedNode;
         }
@@ -402,7 +426,7 @@ void psjf_avl_tree_rotate_left(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node, struct psjf_avl_tree_node * parent)
 {
     struct psjf_avl_tree_node * pivot = node->right;
-    
+
     // Update references
     if (parent != 0 && parent->left == node) {
         parent->left = pivot;
@@ -410,16 +434,16 @@ void psjf_avl_tree_rotate_left(struct psjf_avl_tree * tree,
     else if (parent != 0) {
         parent->right = pivot;
     }
-    
+
     node->right = pivot->left;
     pivot->left = node;
-    
+
     // Update height
     psjf_avl_tree_update_height_down(node->left);
     psjf_avl_tree_update_height_down(pivot->right);
     psjf_avl_tree_update_height(node);
     psjf_avl_tree_update_height(pivot);
-    
+
     if (node == tree->root) {
         tree->root = pivot;
     }
@@ -429,25 +453,25 @@ void psjf_avl_tree_rotate_right(struct psjf_avl_tree * tree,
     struct psjf_avl_tree_node * node, struct psjf_avl_tree_node * parent)
 {
     struct psjf_avl_tree_node * pivot = node->left;
-    
+
     // Update pointers
-    
+
     if (parent != 0 && parent->left == node) {
         parent->left = pivot;
     }
     else if (parent != 0) {
         parent->right = pivot;
     }
-    
+
     node->left = pivot->right;
     pivot->right = node;
-    
+
     // Update height
     psjf_avl_tree_update_height_down(pivot->left);
     psjf_avl_tree_update_height_down(node->right);
     psjf_avl_tree_update_height_down(node);
     psjf_avl_tree_update_height(pivot);
-    
+
     if (node == tree->root) {
         tree->root = pivot;
     }
@@ -505,5 +529,14 @@ long psjf_avl_tree_update_height_down(struct psjf_avl_tree_node * node) {
     else {
         node->height = psjf_avl_tree_max(psjf_avl_tree_update_height_down(node->left), psjf_avl_tree_update_height_down(node->right));
         return node->height + 1;
+    }
+}
+
+void psjf_avl_tree_delete_all_helper(struct psjf_avl_tree_node * node) {
+    if (node != 0) {
+        psjf_avl_tree_delete_all_helper(node->left);
+        psjf_avl_tree_delete_all_helper(node->right);
+        free(node->data);
+        free(node);
     }
 }

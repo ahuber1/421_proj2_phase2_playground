@@ -25,6 +25,8 @@ void * psjf_avl_tree_delete(
     void * data,
     int (*compareEncapsulatedNodeData)(void * dataInNode, void * dataToDelete));
 
+void psjf_avl_tree_delete_all(struct psjf_avl_tree * tree);
+
 long psjf_avl_tree_get_num_nodes(struct psjf_avl_tree * tree);
 
 void psjf_avl_tree_in_order_traversal(struct psjf_avl_tree * tree,

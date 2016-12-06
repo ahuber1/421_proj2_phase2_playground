@@ -1,7 +1,9 @@
 # List of files
 SOURCE_CODE = main.c \
 	PSJF_Linked_List.c \
-	PSJF_AVL_Tree.c
+	PSJF_AVL_Tree.c \
+	PSJF_Shared.c \
+	PSJF_Dictionary.c
 
 EXECUTABLE = a.out
 OUTPUT = output.txt

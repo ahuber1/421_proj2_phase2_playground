@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <execinfo.h>
 
+#include "PSJF_Shared.h"
 #include "PSJF_Linked_List.h"
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -50,7 +51,7 @@ void* psjf_linked_list_delete(
         linkedList->numNodes = linkedList->numNodes - 1;
 
         free(node);
-        
+
         if ((linkedList->head == 0 || linkedList->tail == 0) && linkedList->numNodes > 0) {
             printf("HERE!\n");
         }
@@ -107,7 +108,7 @@ void psjf_linked_list_insert_at_tail(
     }
 
     linkedList->numNodes = linkedList->numNodes + 1;
-    
+
     if ((linkedList->head == 0 || linkedList->tail == 0) && linkedList->numNodes > 0) {
         printf("HERE!\n");
     }
@@ -115,7 +116,7 @@ void psjf_linked_list_insert_at_tail(
 
 struct psjf_linked_list * psjf_linked_list_make_empty_list(void) {
     struct psjf_linked_list * list =
-        malloc(sizeof(struct psjf_linked_list));
+        (struct psjf_linked_list *) myalloc(sizeof(struct psjf_linked_list));
 
     list->numNodes = 0;
     list->head = 0;
@@ -172,7 +173,7 @@ struct psjf_linked_list_node * psjf_linked_list_make_node(
     void* data)
 {
     struct psjf_linked_list_node * node =
-        (struct psjf_linked_list_node *) malloc(sizeof(
+        (struct psjf_linked_list_node *) myalloc(sizeof(
             struct psjf_linked_list_node));
 
     node->previous = previous;
