@@ -6,24 +6,69 @@
 #include "PSJF_Shared.h"
 
 #define MIN 1
-#define MAX 100000
-#define N 10
+#define MAX 1000000
+#define N 100000
 #define RANDOM(min, max) ((rand() % (max - min + 1)) + min)
 
-int compareInts(void * ptr1, void * ptr2);
-void printInt(void * ptr);
+long comparelongs(long * ptr1, long * ptr2);
+void printlong(void * ptr);
 
-void printItem(void * ptr) {
-    struct psjf_dictionary_item * item = (struct psjf_dictionary_item *) ptr;
-    printf("(");
-    printInt(item->key);
-    printf(", ");
-    printInt(item->value);
-    printf(")");
+void printItem(struct psjf_dictionary_item * item) {
+    printlong(item->key);
 }
 
-int linearSearch(int size, int * array, int target) {
-    int i;
+int treeWalkHelper(struct psjf_avl_tree_node * node, long * target) {
+    if (node == 0) {
+        return FALSE;
+    }
+    else if (comparelongs(node->data->key, target) == 0) {
+        return TRUE;
+    }
+    else if (treeWalkHelper(node->left, target) == TRUE) {
+        return TRUE;
+    }
+    else if (treeWalkHelper(node->right, target) == TRUE) {
+        return TRUE;
+    }
+    else {
+        return FALSE;
+    }
+}
+
+int treeWalkHelper2(struct psjf_avl_tree_node * node, long * target) {
+    if (node == 0) {
+        return FALSE;
+    }
+    else if (comparelongs(node->data->key, target) == 0) {
+        return TRUE;
+    }
+    else if (comparelongs(node->data->key, target) > 0 && treeWalkHelper2(node->left, target) == TRUE) {
+        return TRUE;
+    }
+    else if (comparelongs(node->data->key, target) < 0 && treeWalkHelper2(node->right, target) == TRUE) {
+        return TRUE;
+    }
+    else {
+        return FALSE;
+    }
+}
+
+void treeWalk(struct psjf_avl_tree * tree, int i, long * array) {
+    
+    psjf_avl_tree_in_order_traversal(tree, &printItem);
+    printf("\n");
+    int j;
+    for (j = i; j < N; j++) {
+        if (treeWalkHelper(tree->root, &array[j]) == TRUE && treeWalkHelper2(tree->root, &array[j]) == FALSE) {
+            printf("%ld\n", array[i]);
+            printf("%ld\n", array[j]);
+            printf("We have a problem!\n");
+        }
+    }
+}
+
+long linearSearch(long size, long * array, long target) {
+    long i;
     
     for (i = 0; i < size; i++) {
         if (array[i] == target) {
@@ -37,8 +82,8 @@ int linearSearch(int size, int * array, int target) {
     return FALSE;
 }
 
-void clearOutArray(int size, int * array) {
-    int i;
+void clearOutArray(long size, long * array) {
+    long i;
     
     for (i = 0; i < size; i++) {
         array[i] = 0;
@@ -48,13 +93,13 @@ void clearOutArray(int size, int * array) {
 int main(int argc, char const *argv[]) {
     srand(time(0));
     struct psjf_dictionary * dict = psjf_dictionary_make_dictionary();
-    int randomNumbers[N];
+    long randomNumbers[N];
     clearOutArray(N, randomNumbers);
     int i;
 
     for (i = 0; i < N; i++) {
-        int * value = (int *) myalloc(sizeof(int));
-        int * key = (int *) myalloc(sizeof(int));
+        long * value = (long *) myalloc(sizeof(long));
+        long * key = (long *) myalloc(sizeof(long));
         
         do {
             *key = RANDOM(MIN, MAX);
@@ -63,95 +108,97 @@ int main(int argc, char const *argv[]) {
         randomNumbers[i] = *key;
         *value = randomNumbers[i] * 2;
 
-        psjf_dictionary_set(dict, key, value, &compareInts);
-        printf("1. Added (%d, %d)\n", randomNumbers[i], *value);
-        printf("\n");
-        psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
-        printf("\n");
+        psjf_dictionary_set(dict, key, value, &comparelongs);
+        
+        printf("1. Added (%ld, %ld) to the dictionary\n", *key, *value);
     }
     
-    int * key = (int *) myalloc(sizeof(int));
+    long * key = (long *) myalloc(sizeof(long));
 
     for (i = 0; i < N; i++) {
-        printf("%d\n", randomNumbers[i]);
         *key = randomNumbers[i];
-        int * value = (int *) psjf_dictionary_get(dict, key, &compareInts);
-        printf("\n");
-        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
+        long * value = (long *) psjf_dictionary_get(dict, key, &comparelongs);
 
         if (value == 0) {
-            fprintf(stderr, "2. Failure; null pointer...\n");
+            printf("2. %ld failed; null polonger...\n", randomNumbers[i]);
             return -1;
         }
         else if (randomNumbers[i] * 2 == *value) {
-            printf("2. %d passed with a value of %d\n", i, *value);
+            //printf("2. %ld passed with a value of %ld\n", randomNumbers[i], *value);
         }
         else {
-            fprintf(stderr, "2. %d failed with a value of %d\n", i, *value);
+            printf("2. %ld failed with a value of %ld\n", randomNumbers[i], *value);
             return -1;
         }
 
-        value = (int *) myalloc(sizeof(int));
+        value = (long *) myalloc(sizeof(long));
         *value = randomNumbers[i] * 3;
 
-        psjf_dictionary_set(dict, &randomNumbers[i], value, &compareInts);
-        printf("\n");
-        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
+        psjf_dictionary_set(dict, key, value, &comparelongs);
     }
-
+    
     for (i = 0; i < N; i++) {
+        *key = randomNumbers[i];
+        long * value = (long *) psjf_dictionary_get(dict, key, &comparelongs);
         
-        int * value = (int *) psjf_dictionary_get(dict, &randomNumbers[i], &compareInts);
-        printf("\n");
-        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
-
         if (value == 0) {
-            fprintf(stderr, "3. Failure; null pointer...\n");
+            printf("3. %ld failed; null polonger...\n", randomNumbers[i]);
             return -1;
         }
         else if (randomNumbers[i] * 3 == *value) {
-            printf("3. %d passed with a value of %d\n", i, *value);
+            //printf("3. %ld passed with a value of %ld\n", randomNumbers[i], *value);
         }
         else {
-            fprintf(stderr, "3. %d failed with a value of %d\n", i, *value);
+            printf("3. %ld failed with a value of %ld\n", randomNumbers[i], *value);
             return -1;
         }
-
-        psjf_dictionary_remove(dict, &randomNumbers[i], &compareInts);
-        printf("\n");
-        //psjf_avl_tree_in_order_traversal(dict->tree, &printItem);
-    }
-
-    for (i = 0; i < N; i++) {
-        if (psjf_dictionary_get(dict, &randomNumbers[i], &compareInts) == 0) {
-            printf("4. %d passed\n", randomNumbers[i]);
+        
+        value = (long *) psjf_dictionary_remove(dict, key, &comparelongs);
+        
+        if (value == 0) {
+            printf("4. %ld failed; null polonger...\n", randomNumbers[i]);
+            return -1;
+        }
+        else if (randomNumbers[i] * 3 == *value) {
+            //printf("4. %ld passed with a value of %ld\n", randomNumbers[i], *value);
         }
         else {
-            fprintf(stderr, "4. %d failed\n", randomNumbers[i]);
+            printf("4. %ld failed with a value of %ld\n", randomNumbers[i], *value);
+            return -1;
+        }
+    }
+    
+    for (i = 0; i < N; i++) {
+        
+        *key = randomNumbers[i];
+        
+        if (psjf_dictionary_get(dict, key, &comparelongs) == 0) {
+            printf("5. %ld passed!\n", *key);
+        }
+        else {
+            printf("5. %ld failed...\n", *key);
             return -1;
         }
     }
 
     psjf_dictionary_clear(dict);
     free(dict);
+    return 0;
 }
 
-int compareInts(void * ptr1, void * ptr2) {
-    int num1 = *((int *) ptr1);
-    int num2 = *((int *) ptr2);
-    printf("num1 = %d\tnum2 = %d\n", num1, num2);
-    return num1 - num2;
+long comparelongs(long * ptr1, long * ptr2) {
+    return *ptr1 - *ptr2;
 }
 
-void printInt(void * ptr) {
-    printf("%d", *((int*) ptr));
+void printlong(void * ptr) {
+    printf("%10ld", *((long *) ptr));
 }
 
-//void printItem(void * ptr) {
+//void printItem(long ptr) {
 //    struct psjf_dictionary_item * item = (struct psjf_dictionary_item *) ptr;
 //    printf("(");
-//    printInt(item->key);
+//    printlong(item->key);
 //    printf(", ");
-//    printInt(item->value);
+//    printlong(item->value);
 //    printf(")");
 //}
